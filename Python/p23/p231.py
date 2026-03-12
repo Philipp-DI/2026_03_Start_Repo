@@ -193,6 +193,9 @@ if __name__ == '__main__':
                 print(f"Würfel mit {faces} Seiten erstellt!")
             else: print("Ungültige Eingabe. Ganze Zahl zwischen 3 und 100, du Nüsschen!")
         elif mainmenu_choice == '':
+            if not current_players:
+                print("Keine Spieler vorhanden. Standard-Profil erstellt. (Ein Spieler, 6-seitiger Würfel)")
+                current_players.append(Player('DetlefDefault'))
             play_round(current_players, dice, current_save)
         elif mainmenu_choice == 'q':
             print("Mach's gut. Ciao!")
