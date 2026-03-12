@@ -13,10 +13,10 @@ class Player:
         
     def update_stats(self, stats: dict):
         for key, value in stats.items():
-            self.stats[key] = self.stats.get(key, 0) + value
+            self.stats[int(key)] = self.stats.get(int(key), 0) + value
 
     def __str__(self) -> str:
-        return f"{self.name}: {self.stats}!"
+        return f"'{self.name}': {self.stats}!"
 
 class Dice:
     def __init__(self, face: int) -> None:
@@ -65,10 +65,10 @@ class Statistics:
         self.dirty = True
     
     def display(self):
-        print(f"\nStatistik: '{self.save}'")
+        print(f"\nGesamt-Statistik: '{self.save}'")
         print(f"Gesamte Würfe: {self.rolls_total}")
         if self.rolls_total > 0:
-            print(f" {'face':^5} | {'rolls':^7} | {'relative Häufigkeit':^8}")
+            print(f" {'Auge':^5} | {'Anzahl':^7} | {'Relative Häufigkeit':^8}")
             print("="*38)
             for face, value in self.results.items():
                 prob = value / self.rolls_total
@@ -150,7 +150,7 @@ def new_game(num_players: int):
             else:
                 print("Ungültiger Name. Nur Buchstaben erlaubt. Bitte erneut eingeben.")
                 valid_name = False            
-    return current_players
+    return players
 
 def play_round(players: list, dice: Dice, stats_object: Statistics):
     print("Starte neue Runde! Jeder Spieler würfelt einmal.")
@@ -159,9 +159,9 @@ def play_round(players: list, dice: Dice, stats_object: Statistics):
         dice.rolling(1, stats_object)
         round_result = dice.last_result
         player.update_stats({str(round_result): 1})
-        print(f"'{player.name} hat eine {round_result} gewürfelt!")
+        print(f"'{player.name}' hat eine 🎲[{round_result}] gewürfelt!")
     print("Runde beendet.")
-    current_save.display()
+    quick_scores(players)
         
 def quick_scores(players):
     print("\nAktueller Stand:")
@@ -176,14 +176,14 @@ if __name__ == '__main__':
     
     print(f"--- Willkommen im Würfel-Imperium! ---\n[ENTER] Runde spielen, [N] Neues Spiel, [S] Statistiken\n[D] Dateiverwaltung, [Q] Beenden:\n") # Neues Spiel mit Würfel Konfig und SPielerzahl wahl
     while True:
-        mainmenu_choice = input(">Hauptmenü< Warte auf Input: ").strip().lower()
+        mainmenu_choice = input("-- Hauptmenü --\nWarte auf Input: ").strip().lower()
         
         if mainmenu_choice == 'n':
             print("Starte neues Spiel! Zunächst die Anzahl der Spieler festlegen.")
             if (num_players := input("Anzahl Spieler?: ")) and num_players.isdigit() and 99 > int(num_players) > 0:
-                players = new_game(int(num_players))
+                current_players = new_game(int(num_players))
                 print("Spieler im Spiel:")
-                for player in players:
+                for player in current_players:
                     print(f"- {player.name}")
             else: print("Ungültige Eingabe. Ganze Zahl zwischen 1 und 99, du Nuss!")
             print("Jetzt den Würfel konfigurieren! Wie viele Seiten soll er haben? [3 bis 100]")
