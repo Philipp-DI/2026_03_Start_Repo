@@ -9,13 +9,14 @@ import yaml
 class Player:
     def __init__(self, name: str):
         self.name: str = str(name)
-        self.score: int = 0
+        self.stats = {}
         
-    def update_score(self, points: int):
-        self.score += points
+    def update_stats(self, stats: dict):
+        for key, value in stats.items():
+            self.stats[key] = self.stats.get(key, 0) + value
 
     def __str__(self) -> str:
-        return f"{self.name}: {self.score} Punkte"
+        return f"{self.name}: {self.stats}!"
 
 class Dice:
     def __init__(self, face: int) -> None:
@@ -43,7 +44,7 @@ class Statistics:
         'xml': lambda f: et.parse(f).getroot()
     }
     
-    def __init__(self, save, results: dict) -> None:
+    def __init__(self, save, results: dict, **kwargs) -> None:
         self.save: str = str(save)
         self.results: dict = dict(results)
         self.rolls_total: int = sum(results.values())
@@ -65,13 +66,13 @@ class Statistics:
     
     def display(self):
         print(f"\nStatistik: '{self.save}'")
-        print(f"Gesamtrolls der Würfe: {self.rolls_total}")
+        print(f"Gesamte Würfe: {self.rolls_total}")
         if self.rolls_total > 0:
             print(f" {'face':^5} | {'rolls':^7} | {'relative Häufigkeit':^8}")
             print("="*38)
-            for k, v in self.results.items():
-                rh = v / self.rolls_total
-                print(f"  {k:^4} |  {v:^6} | {rh:^10.2%}")
+            for face, value in self.results.items():
+                prob = value / self.rolls_total
+                print(f"  {face:^4} |  {value:^6} | {prob:^10.2%}")
                 print("-"*38)
         else:
             print("Noch keine Daten vorhanden.")
@@ -88,9 +89,9 @@ class Statistics:
         if fileformat == 'xml': # Speicherblock für XML
             root = et.Element('data')
             
-            results_xml = et.SubElement(root, 'resultse')
-            for w_seite, rolls in self.results.items():
-                child = et.SubElement(results_xml, f"f{w_seite}")
+            results_xml = et.SubElement(root, 'results')
+            for face, rolls in self.results.items():
+                child = et.SubElement(results_xml, f"f{face}")
                 child.text = str(rolls)
                 
             tree = et.ElementTree(root)
@@ -106,7 +107,7 @@ class Statistics:
 
     # Laden als Klassenmethode (Fabrik) die ein neues Objekt erstellt anhand externer Daten
     @classmethod
-    def laden(cls, filename: str):
+    def loading(cls, filename: str):
         # Pfad robust machen:
         path = p.Path(filename)
         if not path.is_absolute() and cls.SAVE_PATH not in path.parents:
@@ -122,34 +123,60 @@ class Statistics:
                         data = {int(n.tag[1:]): int(n.text or 0) for n in result_node} if result_node is not None else {}
                     
                 elif fileformat in ['json', 'yaml']:
-                    
                         with open(path, 'r') as f:
                             data = l_function(f)
                 else:
-                    data = {}
-                            
+                    data = {}            
                 return cls(path.stem, data)
             
             except FileNotFoundError:
-                print(f"Dateifehle.")
+                print(f"Datei nix gefunden.")
             except Exception as e:
                 print(f"Unerwarteter Fehler: {e}")
             return None
 
 timestring: str = str(dt.datetime.now().strftime('%Y-%m-%d_%Hh%Mm%Ss'))
 
+def new_game(num_players: int):
+    players = []
+    for i in range(num_players):
+        valid_name = False
+        while not valid_name:
+            name: str = str(input(f"Name Spieler {i + 1}: "))
+            if name.isalpha():
+                players.append(Player(name))
+                print(f"'{name}' hinzugefügt.")
+                valid_name = True
+            else:
+                print("Ungültiger Name. Nur Buchstaben erlaubt. Bitte erneut eingeben.")
+                valid_name = False            
+    return players
+
 if __name__ == '__main__':
     dice = Dice(6)
     empty_dict = dict.fromkeys(range(1, dice.face +1), 0)
     current_save = Statistics('neu', empty_dict)
     
-    print(f"--- Willkommen im Würfel-Imperium! ---\n[Enter] zum Würfeln oder [Zahl] für Durchgänge, [S] Statistiken, [K] Würfel konfigurieren\n[D] Dateiverwaltung, [Q] Beenden:\n")
+    print(f"--- Willkommen im Würfel-Imperium! ---\n[N] Neues Spiel, [S] Statistiken\n[D] Dateiverwaltung, [Q] Beenden:\n") # Neues Spiel mit Würfel Konfig und SPielerzahl wahl
     while True:
         mainmenu_choice = input(">Hauptmenü< Warte auf Input: ").strip().lower()
         
-        if mainmenu_choice == '':
-            dice.rolling(1, current_save)
-            print(f"{dice.face}-seitiger Würfel: 🎲 {dice.last_result}!\nWürfe insgesamt: {current_save.rolls_total}")
+        if mainmenu_choice == 'n':
+            print("Starte neues Spiel! Zunächst die Anzahl der Spieler festlegen.")
+            if (num_players := input("Anzahl Spieler?: ")) and num_players.isdigit() and 99 > int(num_players) > 0:
+                players = new_game(int(num_players))
+                print("Spieler im Spiel:")
+                for player in players:
+                    print(f"- {player.name}")
+            else: print("Ungültige Eingabe. Ganze Zahl zwischen 1 und 99, du Nuss!")
+            print("Jetzt den Würfel konfigurieren! Wie viele Seiten soll er haben? [3 bis 100]")
+            if (faces := input("Anzahl Seiten?: ")) and faces.isdigit() and 100 >= int(faces) >= 3:
+                dice = Dice(int(faces))
+                current_save = Statistics.new_dice_face(int(faces))
+                print(f"Würfel mit {faces} Seiten erstellt!")
+            else: print("Ungültige Eingabe. Ganze Zahl zwischen 3 und 100, du Nüsschen!")
+            # dice.rolling(1, current_save)
+            # print(f"{dice.face}-seitiger Würfel: 🎲 {dice.last_result}!\nWürfe insgesamt: {current_save.rolls_total}")
         elif mainmenu_choice == 'q':
             print("Mach's gut. Ciao!")
             exit()
@@ -183,7 +210,7 @@ if __name__ == '__main__':
                     
                     if choice.isdigit() and 1 <= int(choice) <= len(saves):
                         chosen_file = saves[int(choice) - 1]
-                        loaded = Statistics.laden(str(chosen_file))
+                        loaded = Statistics.loading(str(chosen_file))
                         if loaded is not None:
                             current_save = loaded
                             neue_face = max(current_save.results.keys())
@@ -192,44 +219,3 @@ if __name__ == '__main__':
                         else:
                             print("Laden fehlgeschlagen!")
                     else: print("Ungültige Auswahl.")
-
-def new_game(num_players: int):
-    players = []
-    for i in range(num_players):
-        valid_name = False
-        while not valid_name:
-            name: str = str(input(f"Name Spieler {i + 1}: "))
-            if name.isalpha():
-                players.append(Player(name))
-                print(f"'{name}' hinzugefügt.")
-                valid_name = True
-            else:
-                print("Ungültiger Name. Nur Buchstaben erlaubt. Bitte erneut eingeben.")
-                valid_name = False            
-    return players
-        
-if __name__ == "__main__":
-    menu = True
-    while menu:
-        loading = input("save laden? [L]aden oder [N]eu starten: ").strip().lower()
-        if loading == 'l':
-            players = Player.load()
-            if players:
-                print("save geladen:")
-                for player in players:
-                    print(f"{player.name}: {player.score} Punkte")
-                game_loop(players)
-                menu = False
-        elif loading == 'n':
-            print("Neues Spiel gestartet.")
-            num_players = int(input("rolls der Spieler: "))
-            if 99 > num_players > 0:
-                players = new_game(num_players)
-                if players:
-                    print("Starte das Spiel mit folgenden Spielern:")
-                    for player in players:
-                        print(f"- {player.name}")
-                    game_loop(players)
-                    menu = False
-            else: print("Ganze Zahl zwischen 1 und 99, du Nuss!")
-        else: print("Ungültige Eingabe. [L] oder [N] du Nuss!")
