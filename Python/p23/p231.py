@@ -150,14 +150,31 @@ def new_game(num_players: int):
             else:
                 print("Ungültiger Name. Nur Buchstaben erlaubt. Bitte erneut eingeben.")
                 valid_name = False            
-    return players
+    return current_players
+
+def play_round(players: list, dice: Dice, stats_object: Statistics):
+    print("Starte neue Runde! Jeder Spieler würfelt einmal.")
+    for player in players:
+        input(f"'{player.name}' ist dran! [ENTER] zum Würfeln!")
+        dice.rolling(1, stats_object)
+        round_result = dice.last_result
+        player.update_stats({str(round_result): 1})
+        print(f"'{player.name} hat eine {round_result} gewürfelt!")
+    print("Runde beendet.")
+    current_save.display()
+        
+def quick_scores(players):
+    print("\nAktueller Stand:")
+    for p in players:
+        print(p)
 
 if __name__ == '__main__':
     dice = Dice(6)
     empty_dict = dict.fromkeys(range(1, dice.face +1), 0)
     current_save = Statistics('neu', empty_dict)
+    current_players = []
     
-    print(f"--- Willkommen im Würfel-Imperium! ---\n[N] Neues Spiel, [S] Statistiken\n[D] Dateiverwaltung, [Q] Beenden:\n") # Neues Spiel mit Würfel Konfig und SPielerzahl wahl
+    print(f"--- Willkommen im Würfel-Imperium! ---\n[ENTER] Runde spielen, [N] Neues Spiel, [S] Statistiken\n[D] Dateiverwaltung, [Q] Beenden:\n") # Neues Spiel mit Würfel Konfig und SPielerzahl wahl
     while True:
         mainmenu_choice = input(">Hauptmenü< Warte auf Input: ").strip().lower()
         
@@ -175,8 +192,8 @@ if __name__ == '__main__':
                 current_save = Statistics.new_dice_face(int(faces))
                 print(f"Würfel mit {faces} Seiten erstellt!")
             else: print("Ungültige Eingabe. Ganze Zahl zwischen 3 und 100, du Nüsschen!")
-            # dice.rolling(1, current_save)
-            # print(f"{dice.face}-seitiger Würfel: 🎲 {dice.last_result}!\nWürfe insgesamt: {current_save.rolls_total}")
+        elif mainmenu_choice == '':
+            play_round(current_players, dice, current_save)
         elif mainmenu_choice == 'q':
             print("Mach's gut. Ciao!")
             exit()
